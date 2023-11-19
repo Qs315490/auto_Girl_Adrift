@@ -8,7 +8,7 @@ from win32.win32gui import (
 from win32.win32api import MAKELONG
 from win32con import WM_LBUTTONDOWN, WM_LBUTTONUP, MK_LBUTTON
 from aircv import imread, find_all_template
-from time import sleep
+from time import sleep, strftime, localtime
 from threading import Thread
 from typing import Callable
 from window_shot_background import window_shot
@@ -22,6 +22,11 @@ print("子窗口ID", handle)
 left, top, right, bottom = GetWindowRect(handle)
 window_width = right - left
 window_height = bottom - top
+
+
+def log(*msg: str):
+    curr_time = strftime(r"%Y-%m-%d %H:%M:%S", localtime())
+    print(curr_time, *msg)
 
 
 def tap(x: int | float, y: int | float):
@@ -67,19 +72,18 @@ def search_image(img_name: str, max_count=1, **kwargs):
     # curr_img = window_shot(handle, window_width, window_height)
     src_img = imread(f"png/{img_name}")
     if curr_img is None:
-        return None
+        return []
     result: list[dict[str]] = find_all_template(curr_img, src_img, maxcnt=max_count, **kwargs)  # type: ignore
     if result == []:
-        return None
-    else:
-        if max_count == 1:
-            x, y = result[0]["result"]
-            return x, y
         return result
+    if max_count == 1:
+        x, y = result[0]["result"]
+        return [x, y]
+    return result
 
 
 def tap_action(img_name: str, x: float, y: float):
-    print(f"执行动作: {img_name}")
+    log(f"执行动作: {img_name}")
     tap(x, y)
 
 
@@ -107,22 +111,22 @@ class LoopThread(Thread):
             sleep(self.wait_time)
 
     def fight(self):
-        result = search_image("fight.png",threshold=0.5)
+        result = search_image("fight.png", threshold=0.5)
         fight_flag = True if result else False
         if thread.flag != fight_flag:
             thread.flag = fight_flag
             if fight_flag:
-                print("战斗开始")
+                log("战斗开始")
             else:
-                print("战斗结束")
+                log("战斗结束")
 
     def port(self, x, y):
-        print("执行动作：到达港口")
+        log("执行动作：到达港口")
         tap(x, y)
         sleep(self.wait_time * 2)
         # 是否是黑市
         result = search_image("black_marketeer.png", threshold=0.7)
-        if result is None:
+        if result == []:
             img2tap("sale_all.png", lambda _, x, y: tap_action("卖出物品", x, y))
             return
         Beep(1000, 1000)
@@ -130,7 +134,7 @@ class LoopThread(Thread):
         # img2tap("backpack.png", lambda _, x, y: tap(x, y))
 
     def setp_2(self, x, y, tip: str, img2_name: str):
-        print("执行动作:", tip)
+        log("执行动作:", tip)
         tap(x, y)
         sleep(self.wait_time * 2)
         img2tap(img2_name, lambda _, x, y: tap(x, y))
@@ -141,7 +145,7 @@ class LoopThread(Thread):
         img2tap(img3_name, lambda _, x, y: tap(x, y), 0.5, rgb=True)
 
     def rewards(self, x, y):
-        print("执行动作：领取奖励")
+        log("执行动作：领取奖励")
         tap(x, y)
         sleep(self.wait_time * 2)
         img2tap("rewards1.png", lambda _, x, y: tap(x, y), rgb=True, bgremove=True)
@@ -149,25 +153,26 @@ class LoopThread(Thread):
         img2tap("close.png", lambda _, x, y: tap(x, y))
 
     def capture_vole_start(self, x, y):
-        print("执行动作：捕获田鼠")
+        log("执行动作：捕获田鼠")
         tap(x, y)
         vole_list = [f"vole{i}.png" for i in range(1, 3)]
-        time_flag=0
-        while time_flag >= 20:
+        time_flag = 0
+        while time_flag < 20:
             for vole in vole_list:
                 # img2tap(vole, lambda _, x, y: tap(x, y))
-                results = search_image(vole, threshold=0.7, max_count=6, rgb=True)
-                if results is None:
+                results = search_image(vole, threshold=0.5, max_count=6, rgb=True)
+                if results == []:
                     continue
                 for result in results:
                     x, y = result["result"]
                     tap(x, y)
             result = search_image("capture_vole_end.png", threshold=0.8, rgb=True)
             if result:
-                print("捕获完成")
-                break
+                log("捕获完成")
+                return
             sleep(self.wait_time * 2)
-            time_flag+=1
+            time_flag += 1
+        log("超时: 捕获田鼠, 已自动结束")
 
     def run(self):
         refresh_thread = Thread(target=self.refresh)
@@ -181,7 +186,7 @@ class LoopThread(Thread):
                 lambda _, x, y: tap_action("救济品", x, y),
                 0.6,
                 bgremove=True,
-                rgb=True
+                rgb=True,
             )
             # 到达港口
             img2tap("port.png", lambda _, x, y: self.port(x, y), 0.8)
@@ -192,7 +197,7 @@ class LoopThread(Thread):
                 "capture_vole_start.png",
                 lambda _, x, y: self.capture_vole_start(x, y),
                 0.8,
-                bgremove=True
+                bgremove=True,
             )
             # 看广告加速升级
             img2tap(
