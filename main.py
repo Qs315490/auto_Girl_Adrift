@@ -125,13 +125,14 @@ class LoopThread(Thread):
         tap(x, y)
         sleep(self.wait_time * 2)
         # 是否是黑市
-        result = search_image("black_marketeer.png", threshold=0.7)
+        result = search_image("black_marketeer.png", threshold=0.8)
         if result == []:
             img2tap("sale_all.png", lambda _, x, y: tap_action("卖出物品", x, y))
+            tap(window_width // 2, window_height // 2)
+            # img2tap("backpack.png", lambda _, x, y: tap(x, y))
             return
         Beep(1000, 1000)
         # TODO 选择一个物品卖出
-        # img2tap("backpack.png", lambda _, x, y: tap(x, y))
 
     def setp_2(self, x, y, tip: str, img2_name: str):
         log("执行动作:", tip)
@@ -143,6 +144,7 @@ class LoopThread(Thread):
         self.setp_2(x, y, tip, img2_name)
         sleep(self.wait_time * 2)
         img2tap(img3_name, lambda _, x, y: tap(x, y), 0.5, rgb=True)
+        sleep(self.wait_time * 2)
 
     def rewards(self, x, y):
         log("执行动作：领取奖励")
@@ -157,7 +159,7 @@ class LoopThread(Thread):
         tap(x, y)
         vole_list = [f"vole{i}.png" for i in range(1, 3)]
         time_flag = 0
-        while time_flag < 20:
+        while time_flag < 25:
             for vole in vole_list:
                 # img2tap(vole, lambda _, x, y: tap(x, y))
                 results = search_image(vole, threshold=0.5, max_count=6, rgb=True)
@@ -241,6 +243,8 @@ class LoopThread(Thread):
                 lambda _, x, y: tap_action("观看广告按钮", x, y),
                 rgb=True,
             )
+
+            img2tap("close.png", lambda _, x, y: tap_action("关闭弹窗", x, y))
 
             sleep(self.wait_time)
 
