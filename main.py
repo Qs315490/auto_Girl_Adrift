@@ -97,6 +97,8 @@ def img2tap(
     if result:
         x, y = result
         func(img_name, x, y)
+        return True
+    return False
 
 
 class LoopThread(Thread):
@@ -127,7 +129,11 @@ class LoopThread(Thread):
         # 是否是黑市
         result = search_image("black_marketeer.png", threshold=0.8)
         if result == []:
-            img2tap("sale_all.png", lambda _, x, y: tap_action("卖出物品", x, y))
+            result = img2tap(
+                "sale_all.png", lambda _, x, y: tap_action("卖出物品", x, y), 0.6, rgb=True
+            )
+            if result:
+                log("点击全部卖出成功")
             tap(window_width // 2, window_height // 2)
             # img2tap("backpack.png", lambda _, x, y: tap(x, y))
             return
@@ -244,7 +250,7 @@ class LoopThread(Thread):
                 rgb=True,
             )
 
-            img2tap("close.png", lambda _, x, y: tap_action("关闭弹窗", x, y))
+            img2tap("close2.png", lambda _, x, y: tap_action("关闭弹窗", x, y))
 
             sleep(self.wait_time)
 
