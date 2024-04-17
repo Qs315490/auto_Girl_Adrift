@@ -143,12 +143,12 @@ class LoopThread(Thread):
     def setp_2(self, x, y, tip: str, img2_name: str):
         log("执行动作:", tip)
         tap(x, y)
-        sleep(self.wait_time * 2)
+        sleep(self.wait_time * 3)
         img2tap(img2_name, lambda _, x, y: tap(x, y))
 
     def setp_3(self, x, y, tip: str, img2_name: str, img3_name: str = "close.png"):
         self.setp_2(x, y, tip, img2_name)
-        sleep(self.wait_time * 2)
+        sleep(self.wait_time * 3)
         img2tap(img3_name, lambda _, x, y: tap(x, y), 0.5, rgb=True)
         sleep(self.wait_time * 2)
 
@@ -168,7 +168,7 @@ class LoopThread(Thread):
         while time_flag < 25:
             for vole in vole_list:
                 # img2tap(vole, lambda _, x, y: tap(x, y))
-                results = search_image(vole, threshold=0.5, max_count=6, rgb=True)
+                results = search_image(vole, threshold=0.58, max_count=6, rgb=True)
                 if results == []:
                     continue
                 for result in results:
@@ -189,13 +189,6 @@ class LoopThread(Thread):
             # 战斗
             self.fight()
 
-            img2tap(
-                "relief.png",
-                lambda _, x, y: tap_action("救济品", x, y),
-                0.6,
-                bgremove=True,
-                rgb=True,
-            )
             # 到达港口
             img2tap("port.png", lambda _, x, y: self.port(x, y), 0.8)
 
@@ -210,17 +203,25 @@ class LoopThread(Thread):
             # 看广告加速升级
             img2tap(
                 "ad_update.png",
-                lambda _, x, y: self.setp_2(x, y, "看广告加速升级", "watch_ad_button2.png"),
+                lambda _, x, y: tap_action("看广告加速升级", x, y),
                 0.7,
                 bgremove=True,
             )
             # 看广告获得物品
             img2tap(
                 "ad_get_item.png",
-                lambda _, x, y: self.setp_2(x, y, "看广告获得物品", "watch_ad_button2.png"),
+                lambda _, x, y: tap_action("看广告获得物品", x, y),
                 0.7,
                 bgremove=True,
             )
+
+            img2tap(
+                "watch_ad_button2.png",
+                lambda _, x, y: tap_action("确认看广告", x, y),
+                0.7,
+                rgb=True,
+            )
+
             # 奖励
             img2tap(
                 "rewards.png",
@@ -252,6 +253,35 @@ class LoopThread(Thread):
 
             img2tap("close2.png", lambda _, x, y: tap_action("关闭弹窗", x, y))
 
+            img2tap(
+                "relief.png",
+                lambda _, x, y: tap_action("救济品", x, y),
+                0.6,
+                bgremove=True,
+                rgb=True,
+            )
+
+            img2tap(
+                "ad2.png",
+                lambda _, x, y: tap_action("跳过视频广告按钮", x, y),
+                0.8,
+                rgb=True
+            )
+
+            img2tap(
+                "ad3.png",
+                lambda _, x, y: tap_action("完成按钮", x, y),
+                0.8,
+                rgb=False   
+            )
+
+            img2tap(
+                "ad1.png",
+                lambda _, x, y: tap_action("关闭广告", x, y),
+                0.8,
+                rgb=True
+            )
+            
             sleep(self.wait_time)
 
 
@@ -260,7 +290,7 @@ def main():
     half_height: int = int(window_height / 2)
 
     global thread
-    thread = WhileTap(half_width, half_height)
+    thread = WhileTap(half_width, half_height, wait_time=0.2)
     thread.start()
     loop_thread = LoopThread()
     loop_thread.start()
