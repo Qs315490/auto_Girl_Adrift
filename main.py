@@ -9,7 +9,7 @@ from win32.win32api import MAKELONG
 from win32con import WM_LBUTTONDOWN, WM_LBUTTONUP, MK_LBUTTON
 from aircv import imread, find_all_template
 from time import sleep, strftime, localtime
-from threading import Thread
+from threading import Thread, Event
 from typing import Callable
 from window_shot_background import window_shot
 
@@ -41,7 +41,7 @@ def tap(x: int | float, y: int | float):
 
 class WhileTap(Thread):
     def __init__(self, x: int = 0, y: int = 0, wait_time: float = 0.15):
-        super(WhileTap, self).__init__()
+        super(WhileTap, self).__init__(daemon=True)
         self.x = x
         self.y = y
         self.flag = False
@@ -63,7 +63,6 @@ class WhileTap(Thread):
         while self.wait():
             tap(self.x, self.y)
             sleep(self.wait_time)
-
 
 curr_img = None
 
@@ -103,7 +102,7 @@ def img2tap(
 
 class LoopThread(Thread):
     def __init__(self, wait_time=0.5):
-        super().__init__()
+        super().__init__(daemon=True)
         self.wait_time = wait_time
 
     def refresh(self):
@@ -143,14 +142,8 @@ class LoopThread(Thread):
     def setp_2(self, x, y, tip: str, img2_name: str):
         log("执行动作:", tip)
         tap(x, y)
-        sleep(self.wait_time * 3)
-        img2tap(img2_name, lambda _, x, y: tap(x, y))
-
-    def setp_3(self, x, y, tip: str, img2_name: str, img3_name: str = "close.png"):
-        self.setp_2(x, y, tip, img2_name)
-        sleep(self.wait_time * 3)
-        img2tap(img3_name, lambda _, x, y: tap(x, y), 0.5, rgb=True)
         sleep(self.wait_time * 2)
+        img2tap(img2_name, lambda _, x, y: tap(x, y))
 
     def rewards(self, x, y):
         log("执行动作：领取奖励")
@@ -183,7 +176,7 @@ class LoopThread(Thread):
         log("超时: 捕获田鼠, 已自动结束")
 
     def run(self):
-        refresh_thread = Thread(target=self.refresh)
+        refresh_thread = Thread(target=self.refresh, daemon=True)
         refresh_thread.start()
         while True:
             # 战斗
@@ -225,7 +218,7 @@ class LoopThread(Thread):
             # 奖励
             img2tap(
                 "rewards.png",
-                lambda _, x, y: self.setp_3(x, y, "领取奖励", "rewards1.png"),
+                lambda _, x, y: self.setp_2(x, y, "领取奖励", "rewards1.png"),
                 0.6,
                 rgb=True,
                 bgremove=True,
@@ -233,14 +226,14 @@ class LoopThread(Thread):
             # 邮箱
             img2tap(
                 "email.png",
-                lambda _, x, y: self.setp_3(x, y, "领取邮件奖励", "email2.png"),
+                lambda _, x, y: self.setp_2(x, y, "领取邮件奖励", "email2.png"),
                 0.5,
                 bgremove=True,
             )
             # 上线奖励
             img2tap(
                 "online_reward.png",
-                lambda _, x, y: self.setp_3(x, y, "领取在线奖励", "online_reward2.png"),
+                lambda _, x, y: self.setp_2(x, y, "领取在线奖励", "online_reward2.png"),
                 0.8,
                 bgremove=True,
             )
@@ -252,35 +245,23 @@ class LoopThread(Thread):
             )
 
             img2tap("close2.png", lambda _, x, y: tap_action("关闭弹窗", x, y))
+            img2tap("close.png", lambda _, x, y: tap_action("关闭弹窗", x, y))
 
             img2tap(
                 "relief.png",
                 lambda _, x, y: tap_action("救济品", x, y),
-                0.6,
-                bgremove=True,
+                0.7,
                 rgb=True,
             )
 
-            img2tap(
-                "ad2.png",
-                lambda _, x, y: tap_action("跳过视频广告按钮", x, y),
-                0.8,
-                rgb=True
-            )
-
-            img2tap(
-                "ad3.png",
-                lambda _, x, y: tap_action("完成按钮", x, y),
-                0.8,
-                rgb=False   
-            )
-
-            img2tap(
-                "ad1.png",
-                lambda _, x, y: tap_action("关闭广告", x, y),
-                0.8,
-                rgb=True
-            )
+            ad_list = [f"ad{i}.png" for i in range(1, 6)]
+            for ad in ad_list:
+                img2tap(
+                    ad,
+                    lambda _, x, y: tap_action(f"关闭广告: {ad}", x, y),
+                    0.8,
+                    rgb=True,
+                )
             
             sleep(self.wait_time)
 
@@ -290,12 +271,16 @@ def main():
     half_height: int = int(window_height / 2)
 
     global thread
-    thread = WhileTap(half_width, half_height, wait_time=0.2)
+    thread = WhileTap(half_width, half_height, wait_time=0.25)
     thread.start()
     loop_thread = LoopThread()
     loop_thread.start()
-    thread.join()
-
+    try:
+        while True:
+            thread.join(1)
+    except KeyboardInterrupt:
+        log("程序退出")
+        exit()
 
 if __name__ == "__main__":
     main()
